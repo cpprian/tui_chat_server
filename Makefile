@@ -1,19 +1,14 @@
-ARGS = $(filter-out $@,$(MAKECMDGOALS))
-MAKEFLAGS += --silent
 
 build: 
-	javac *.java
-
-run_rmi: build
-	rmiregistry 7
+	javac -d bin -sourcepath src src/client/ClientImpl.java src/server/ServerImpl.java
 
 run_server: build
-	java ServerImpl
+	java -cp bin src.server.ServerImpl
 
 run_client: build
-	java Client $(ARGS)
+	java -cp bin src.client.ClientImpl
 
 clear:
-	rm -rf *.class
+	rm -rf bin/*
 
-.PHONY: build run_rmi run_server run_client
+.PHONY: build run_server run_client
