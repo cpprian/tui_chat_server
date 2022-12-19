@@ -14,7 +14,6 @@ public class ServerImpl implements Server {
     private Socket clientSocket;
     private PrintWriter out;
     private BufferedReader in;
-    private BufferedReader inServer;
 
     private boolean isRunning = true;
     private ArrayList<ClientInfo> clients = new ArrayList<ClientInfo>();
@@ -22,7 +21,16 @@ public class ServerImpl implements Server {
     public void start(int port) {
         try {
             serverSocket = new ServerSocket(port);
-            inServer = new BufferedReader(new InputStreamReader(System.in));
+            System.out.println("Server started");
+
+            Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    isRunning = false;
+                    stop();
+                }
+            }));
+
             Thread listener = new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -35,17 +43,11 @@ public class ServerImpl implements Server {
                 }
             });
             listener.start();
-
-            while (true) {
-                inServer.readLine();
-                if (inServer.readLine().equals("exit")) {
-                    isRunning = false;
-                    stop();
-                    break;
-                }
-            }
+            listener.join();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("start: Server failed");
+        } catch (InterruptedException e) {
+            System.out.println("start: Interrupted");
         }
     }
 
@@ -57,7 +59,6 @@ public class ServerImpl implements Server {
                 client.getSocket().close();
             }
 
-            inServer.close();
             serverSocket.close();
         } catch (IOException e) {
             System.out.println("stop: Close failed");
@@ -109,14 +110,18 @@ public class ServerImpl implements Server {
                         if (!isRunning) {
                             return;
                         }
-                        
+
                         try {
-                            String message = in.readLine();
+                            String message = client.getIn().readLine();
                             if (message == null) {
-                                System.out.println("receiver: message is null");
+                                System.out.println("receiver: " + client.getName() + " disconnected");
                                 return;
                             }
                             String[] messageParts = message.split(" ");
+                            // join rest of message
+                            for (int i = 2; i < messageParts.length; i++) {
+                                messageParts[1] += " " + messageParts[i];
+                            }
                             if (messageParts[0].equals("ALL")) {
                                 broadcast(messageParts[1], "ALL", client);
                             } else {
